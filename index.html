@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能 TXT 转 .123 工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 450px;
+            max-width: 90%;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        .section {
+            border: 1px solid #e1e4e8;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            background: #fff;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #0056b3;
+            display: flex;
+            align-items: center;
+        }
+        .badge {
+            background: #e7f1ff;
+            color: #0056b3;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        .status-msg {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 8px;
+            min-height: 1.2em;
+        }
+        .warning {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #856404;
+            background-color: #fff3cd;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>TXT 压缩工具 (.123版)</h2>
+
+        <div class="section">
+            <div class="section-title">
+                模式 A: 批量独立压缩
+                <span class="badge">一对一</span>
+            </div>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">选择多个文件，每个都会生成单独的 .123 包。</p>
+            <input type="file" id="filesInput" multiple accept=".txt">
+            <button class="btn-primary" id="btnBatch" onclick="handleBatchFiles()">批量开始下载</button>
+            <div id="statusBatch" class="status-msg"></div>
+            <div class="warning" id="permWarning" style="display:none;">
+                ⚠️ <strong>注意：</strong> 如果浏览器拦截了多个文件的下载，请在地址栏右侧点击“允许下载多个文件”。
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">
+                模式 B: 文件夹整体打包
+                <span class="badge">多对一</span>
+            </div>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">选择一个文件夹，保留目录结构打包为一个 .123 包。</p>
+            <input type="file" id="folderInput" webkitdirectory>
+            <button class="btn-success" id="btnFolder" onclick="handleFolder()">打包文件夹</button>
+            <div id="statusFolder" class="status-msg"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // 通用下载函数
+        function downloadBlob(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // =======================
+        // 模式 A: 批量独立压缩
+        // =======================
+        async function handleBatchFiles() {
+            const input = document.getElementById('filesInput');
+            const status = document.getElementById('statusBatch');
+            const warning = document.getElementById('permWarning');
+            const btn = document.getElementById('btnBatch');
+
+            if (input.files.length === 0) {
+                alert("请先在模式 A 中选择文件！");
+                return;
+            }
+
+            if (input.files.length > 1) {
+                warning.style.display = 'block';
+            }
+
+            btn.disabled = true;
+            status.innerText = `正在处理 ${input.files.length} 个文件...`;
+
+            try {
+                for (let i = 0; i < input.files.length; i++) {
+                    const file = input.files[i];
+                    
+                    // 1. 为每个文件创建一个新的 ZIP 对象
+                    const zip = new JSZip();
+                    
+                    // 2. 将文件放入 ZIP
+                    zip.file(file.name, file);
+
+                    // 3. 生成 Blob
+                    const content = await zip.generateAsync({ type: "blob" });
+
+                    // 4. 处理文件名 (移除原后缀，添加 .123)
+                    // 如果原文件名是 log.txt，处理后为 log.123
+                    let baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    const finalName = baseName + ".123";
+
+                    // 5. 下载
+                    downloadBlob(content, finalName);
+
+                    // 简单延时，防止浏览器因为请求过快而直接屏蔽后续下载
+                    status.innerText = `已完成: ${i+1} / ${input.files.length}`;
+                    await new Promise(r => setTimeout(r, 200)); 
+                }
+                status.innerText = "批量处理完成！请检查下载目录。";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "发生错误: " + err.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // =======================
+        // 模式 B: 文件夹打包
+        // =======================
+        async function handleFolder() {
+            const input = document.getElementById('folderInput');
+            const status = document.getElementById('statusFolder');
+            const btn = document.getElementById('btnFolder');
+
+            if (input.files.length === 0) {
+                alert("请先在模式 B 中选择文件夹！");
+                return;
+            }
+
+            btn.disabled = true;
+            status.innerText = "正在分析文件夹结构...";
+
+            try {
+                const zip = new JSZip();
+                
+                // 获取文件夹名称（通常取第一个文件的路径第一段）
+                let folderName = "folder_archive";
+                if (input.files[0].webkitRelativePath) {
+                    const parts = input.files[0].webkitRelativePath.split('/');
+                    if (parts.length > 0) folderName = parts[0];
+                }
+
+                // 遍历文件夹内所有文件
+                for (let i = 0; i < input.files.length; i++) {
+                    const file = input.files[i];
+                    // 使用 webkitRelativePath 保持文件夹内的层级结构
+                    // 例如: MyFolder/sub/a.txt 会被完整保留路径放入 zip
+                    zip.file(file.webkitRelativePath, file);
+                }
+
+                status.innerText = "正在压缩...";
+                const content = await zip.generateAsync({ type: "blob" });
+
+                const finalName = folderName + ".123";
+                
+                downloadBlob(content, finalName);
+                status.innerText = "文件夹打包下载已开始！";
+
+            } catch (err) {
+                console.error(err);
+                status.innerText = "错误: " + err.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
