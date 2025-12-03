@@ -3,198 +3,239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>万能文件转 .123 工具</title>
+    <title>文件转 .123 工具 (修复版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+        /* --- 1. 全局重置 (修复界面错乱的核心) --- */
+        * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        .container {
-            background-color: white;
-            padding: 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 500px;
-            max-width: 100%;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
         }
-        h2 {
+
+        /* --- 2. 主容器样式 --- */
+        .card {
+            background: white;
+            width: 100%;
+            max-width: 480px; /* 限制最大宽度，防止太宽 */
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            padding: 30px;
             text-align: center;
-            color: #2c3e50;
-            margin-top: 0;
-            margin-bottom: 2rem;
-            font-weight: 600;
         }
-        
-        /* 隐藏原生的丑陋 file input */
+
+        h2 {
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        /* --- 3. 两个区域的分隔线 --- */
+        .divider {
+            height: 1px;
+            background-color: #e1e4e8;
+            margin: 30px 0;
+            border: none;
+        }
+
+        /* --- 4. 上传区域样式 --- */
+        .section-title {
+            text-align: left;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #666;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* 隐藏原始的文件输入框 */
         input[type="file"] {
             display: none;
         }
 
-        /* 自定义的大按钮样式 */
-        .upload-box {
-            border: 2px dashed #bdc3c7;
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
+        /* 自定义上传按钮 (Label) */
+        .upload-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 30px 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             background-color: #fafbfc;
             margin-bottom: 15px;
-            position: relative;
+            min-height: 120px; /* 保证高度一致 */
         }
-        .upload-box:hover {
-            border-color: #3498db;
-            background-color: #ecf6fc;
-            transform: translateY(-2px);
+
+        .upload-area:hover {
+            border-color: #3182ce;
+            background-color: #ebf8ff;
         }
-        .upload-box.active {
-            border-color: #2ecc71;
+
+        /* 选中文件后的样式 (通过JS添加这个类) */
+        .upload-area.has-file {
+            border-style: solid;
+            border-color: #38a169;
             background-color: #f0fff4;
         }
-        
+
         .icon {
-            font-size: 40px;
-            display: block;
+            font-size: 32px;
             margin-bottom: 10px;
-            color: #3498db;
-        }
-        .box-title {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #34495e;
-            display: block;
-        }
-        .box-desc {
-            font-size: 0.85rem;
-            color: #7f8c8d;
-            margin-top: 5px;
-            display: block;
         }
 
-        /* 选好文件后的提示 */
-        .file-info {
+        .text-main {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .text-sub {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        /* 选中文件后的提示文字 */
+        .file-status {
             font-size: 0.9rem;
-            color: #27ae60;
+            height: 20px;
             margin-bottom: 15px;
-            text-align: center;
             font-weight: 500;
-            min-height: 1.2em;
         }
+        .file-status.success { color: #38a169; }
+        .file-status.error { color: #e53e3e; }
+        .file-status.waiting { color: #718096; }
 
-        /* 按钮 */
-        .action-btn {
+        /* --- 5. 执行按钮样式 --- */
+        .btn {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: opacity 0.2s;
             color: white;
-            margin-bottom: 30px; /* 增加两个区域的间距 */
         }
-        .btn-blue { background-color: #3498db; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
-        .btn-blue:hover { background-color: #2980b9; }
         
-        .btn-green { background-color: #2ecc71; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
-        .btn-green:hover { background-color: #27ae60; }
+        .btn-blue { background-color: #3182ce; }
+        .btn-blue:hover { background-color: #2b6cb0; }
 
-        .btn-disabled {
-            background-color: #95a5a6;
+        .btn-green { background-color: #38a169; }
+        .btn-green:hover { background-color: #2f855a; }
+
+        .btn:disabled {
+            background-color: #a0aec0;
             cursor: not-allowed;
-            box-shadow: none;
         }
 
-        .section-label {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #95a5a6;
-            margin-bottom: 10px;
-            display: block;
-            font-weight: bold;
-        }
-
-        .status-msg {
-            text-align: center;
-            font-size: 0.9rem;
-            color: #e67e22;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>📦 万能文件转 .123</h2>
+    <div class="card">
+        <h2>🛠️ 万能文件转 .123</h2>
 
         <div>
-            <span class="section-label">模式 A: 任意文件一对一</span>
+            <div class="section-title">模式 A: 批量独立处理</div>
             
-            <label for="filesInput" class="upload-box" id="boxA">
-                <span class="icon">📄</span>
-                <span class="box-title">点击选择任意文件</span>
-                <span class="box-desc">支持多选，不限格式 (图片/视频/文档等)</span>
+            <label for="input-batch" class="upload-area" id="area-batch">
+                <div class="icon">📄</div>
+                <div class="text-main">点击选择文件</div>
+                <div class="text-sub">支持多选，一对一压缩</div>
             </label>
-            <input type="file" id="filesInput" multiple onchange="updateFileInfo('filesInput', 'infoA', 'boxA')">
+            <input type="file" id="input-batch" multiple onchange="uiUpdateBatch()">
             
-            <div id="infoA" class="file-info">未选择文件</div>
-            
-            <button class="action-btn btn-blue" id="btnBatch" onclick="handleBatchFiles()">⬇️ 批量独立压缩下载</button>
-            <div id="statusBatch" class="status-msg"></div>
+            <div id="msg-batch" class="file-status waiting">等待选择...</div>
+            <button id="btn-batch" class="btn btn-blue" onclick="runBatch()">⬇️ 开始批量转换</button>
         </div>
 
-        <hr style="border:0; border-top:1px solid #eee; margin: 0 0 30px 0;">
+        <hr class="divider">
 
         <div>
-            <span class="section-label">模式 B: 文件夹整体打包</span>
+            <div class="section-title">模式 B: 文件夹整体打包</div>
             
-            <label for="folderInput" class="upload-box" id="boxB">
-                <span class="icon">📁</span>
-                <span class="box-title">点击选择文件夹</span>
-                <span class="box-desc">保留目录结构，整包下载</span>
+            <label for="input-folder" class="upload-area" id="area-folder">
+                <div class="icon">📁</div>
+                <div class="text-main">点击选择文件夹</div>
+                <div class="text-sub">文件夹名保持不变</div>
             </label>
-            <input type="file" id="folderInput" webkitdirectory onchange="updateFileInfo('folderInput', 'infoB', 'boxB')">
+            <input type="file" id="input-folder" webkitdirectory onchange="uiUpdateFolder()">
             
-            <div id="infoB" class="file-info">未选择文件夹</div>
-            
-            <button class="action-btn btn-green" id="btnFolder" onclick="handleFolder()">⬇️ 打包文件夹下载</button>
-            <div id="statusFolder" class="status-msg"></div>
+            <div id="msg-folder" class="file-status waiting">等待选择...</div>
+            <button id="btn-folder" class="btn btn-green" onclick="runFolder()">⬇️ 打包文件夹</button>
         </div>
-
     </div>
 
     <script>
-        // 更新显示选中了多少个文件
-        function updateFileInfo(inputId, infoId, boxId) {
-            const input = document.getElementById(inputId);
-            const info = document.getElementById(infoId);
-            const box = document.getElementById(boxId);
+        // --- UI 更新逻辑 (让界面有反应) ---
+        function uiUpdateBatch() {
+            const input = document.getElementById('input-batch');
+            const area = document.getElementById('area-batch');
+            const msg = document.getElementById('msg-batch');
             
-            if (input.files.length > 0) {
-                if(inputId === 'folderInput') {
-                    // 文件夹模式通常文件很多，显示总数
-                    info.innerText = `已选中文件夹，包含 ${input.files.length} 个文件`;
-                } else {
-                    info.innerText = `已选中 ${input.files.length} 个文件`;
-                }
-                box.classList.add('active');
+            if (input.files && input.files.length > 0) {
+                area.classList.add('has-file');
+                msg.textContent = `已选中 ${input.files.length} 个文件`;
+                msg.className = 'file-status success';
             } else {
-                info.innerText = "未选择文件";
-                box.classList.remove('active');
+                area.classList.remove('has-file');
+                msg.textContent = '等待选择...';
+                msg.className = 'file-status waiting';
             }
         }
 
-        // 通用下载
+        function uiUpdateFolder() {
+            const input = document.getElementById('input-folder');
+            const area = document.getElementById('area-folder');
+            const msg = document.getElementById('msg-folder');
+            
+            if (input.files && input.files.length > 0) {
+                area.classList.add('has-file');
+                // 尝试获取文件夹名称
+                const folderName = getFolderName(input.files);
+                msg.textContent = `已选中文件夹: ${folderName}`;
+                msg.className = 'file-status success';
+            } else {
+                area.classList.remove('has-file');
+                msg.textContent = '等待选择...';
+                msg.className = 'file-status waiting';
+            }
+        }
+
+        // --- 核心工具函数 ---
+        
+        // 获取文件夹名称的准确方法
+        function getFolderName(files) {
+            if (!files || files.length === 0) return "archive";
+            // webkitRelativePath 格式通常是 "Folder/Sub/file.txt"
+            const path = files[0].webkitRelativePath; 
+            if (path) {
+                const parts = path.split('/');
+                if (parts.length > 0) return parts[0];
+            }
+            return "folder_archive";
+        }
+
+        // 下载 Blob
         function downloadBlob(blob, filename) {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -204,100 +245,87 @@
             document.body.removeChild(link);
         }
 
-        // --- 模式 A 逻辑 ---
-        async function handleBatchFiles() {
-            const input = document.getElementById('filesInput');
-            const status = document.getElementById('statusBatch');
-            const btn = document.getElementById('btnBatch');
+        // --- 业务逻辑 A: 批量 ---
+        async function runBatch() {
+            const input = document.getElementById('input-batch');
+            const msg = document.getElementById('msg-batch');
+            const btn = document.getElementById('btn-batch');
 
-            if (input.files.length === 0) {
-                alert("请先点击上方的大方框选择文件！");
+            if (!input.files || input.files.length === 0) {
+                alert("请先选择文件！");
                 return;
             }
 
-            // 提示用户允许多文件下载
-            if (input.files.length > 1) {
-                status.innerText = "⚠️ 如下载被拦截，请在地址栏允许下载多个文件";
-            }
-
             btn.disabled = true;
-            btn.classList.add('btn-disabled');
             
             try {
                 for (let i = 0; i < input.files.length; i++) {
                     const file = input.files[i];
+                    msg.textContent = `正在处理: ${i + 1} / ${input.files.length}`;
                     
                     const zip = new JSZip();
-                    zip.file(file.name, file); // 放入 ZIP
-
+                    zip.file(file.name, file); // 将文件放入包内
+                    
                     const content = await zip.generateAsync({ type: "blob" });
-
-                    // 获取不带后缀的文件名
+                    
+                    // 文件名处理： image.png -> image.123
                     let baseName = file.name;
-                    // 如果文件名里有 . 则去掉最后一个 . 及其后面的内容
-                    if(baseName.lastIndexOf('.') > 0) {
+                    if (baseName.lastIndexOf('.') > 0) {
                         baseName = baseName.substring(0, baseName.lastIndexOf('.'));
                     }
                     
-                    const finalName = baseName + ".123";
-
-                    downloadBlob(content, finalName);
+                    downloadBlob(content, baseName + ".123");
                     
-                    // 稍微等待，避免浏览器卡死
-                    await new Promise(r => setTimeout(r, 300));
+                    // 缓冲一下，防止浏览器卡顿
+                    await new Promise(r => setTimeout(r, 200));
                 }
-                status.innerText = "✅ 所有文件处理完毕！";
+                msg.textContent = "✅ 全部转换完成！";
             } catch (err) {
                 console.error(err);
-                status.innerText = "❌ 出错: " + err.message;
+                msg.textContent = "❌ 错误: " + err.message;
+                msg.className = 'file-status error';
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('btn-disabled');
             }
         }
 
-        // --- 模式 B 逻辑 ---
-        async function handleFolder() {
-            const input = document.getElementById('folderInput');
-            const status = document.getElementById('statusFolder');
-            const btn = document.getElementById('btnFolder');
+        // --- 业务逻辑 B: 文件夹 ---
+        async function runFolder() {
+            const input = document.getElementById('input-folder');
+            const msg = document.getElementById('msg-folder');
+            const btn = document.getElementById('btn-folder');
 
-            if (input.files.length === 0) {
-                alert("请先点击文件夹图标选择文件夹！");
+            if (!input.files || input.files.length === 0) {
+                alert("请先选择文件夹！");
                 return;
             }
 
             btn.disabled = true;
-            btn.classList.add('btn-disabled');
-            status.innerText = "⏳ 正在压缩，请稍候...";
+            msg.textContent = "📦 正在打包，文件较多请稍候...";
 
             try {
                 const zip = new JSZip();
-                
-                // 智能获取文件夹名
-                let folderName = "folder_archive";
-                if (input.files[0].webkitRelativePath) {
-                    const parts = input.files[0].webkitRelativePath.split('/');
-                    if (parts.length > 0) folderName = parts[0];
-                }
+                const folderName = getFolderName(input.files);
 
+                // 遍历所有文件，保持结构
                 for (let i = 0; i < input.files.length; i++) {
                     const file = input.files[i];
+                    // webkitRelativePath 包含了文件夹结构
                     zip.file(file.webkitRelativePath, file);
                 }
 
                 const content = await zip.generateAsync({ type: "blob" });
-                const finalName = folderName + ".123";
                 
-                downloadBlob(content, finalName);
-                status.innerText = "✅ 下载已开始！";
-
+                // 使用获取到的文件夹名 + .123
+                downloadBlob(content, folderName + ".123");
+                
+                msg.textContent = "✅ 下载已开始！";
             } catch (err) {
                 console.error(err);
-                status.innerText = "❌ 出错: " + err.message;
+                msg.textContent = "❌ 错误: " + err.message;
+                msg.className = 'file-status error';
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('btn-disabled');
             }
         }
     </script>
