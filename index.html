@@ -3,131 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能 TXT 转 .123 工具</title>
+    <title>万能文件转 .123 工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            background-color: #f4f6f8;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            box-sizing: border-box;
         }
         .container {
             background-color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            width: 450px;
-            max-width: 90%;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 500px;
+            max-width: 100%;
         }
         h2 {
             text-align: center;
-            color: #333;
+            color: #2c3e50;
+            margin-top: 0;
             margin-bottom: 2rem;
+            font-weight: 600;
         }
-        .section {
-            border: 1px solid #e1e4e8;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            background: #fff;
-        }
-        .section-title {
-            font-weight: bold;
-            margin-bottom: 1rem;
-            color: #0056b3;
-            display: flex;
-            align-items: center;
-        }
-        .badge {
-            background: #e7f1ff;
-            color: #0056b3;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
-        input[type="file"] {
-            display: block;
-            width: 100%;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: opacity 0.2s;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-        .btn-success {
-            background-color: #28a745;
-            color: white;
-        }
-        button:hover { opacity: 0.9; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
         
-        .status-msg {
+        /* 隐藏原生的丑陋 file input */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* 自定义的大按钮样式 */
+        .upload-box {
+            border: 2px dashed #bdc3c7;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fafbfc;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .upload-box:hover {
+            border-color: #3498db;
+            background-color: #ecf6fc;
+            transform: translateY(-2px);
+        }
+        .upload-box.active {
+            border-color: #2ecc71;
+            background-color: #f0fff4;
+        }
+        
+        .icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+        .box-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #34495e;
+            display: block;
+        }
+        .box-desc {
             font-size: 0.85rem;
-            color: #666;
-            margin-top: 8px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* 选好文件后的提示 */
+        .file-info {
+            font-size: 0.9rem;
+            color: #27ae60;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
             min-height: 1.2em;
         }
-        .warning {
-            margin-top: 10px;
-            font-size: 0.8rem;
-            color: #856404;
-            background-color: #fff3cd;
-            padding: 8px;
-            border-radius: 4px;
-            border-left: 3px solid #ffeeba;
+
+        /* 按钮 */
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            color: white;
+            margin-bottom: 30px; /* 增加两个区域的间距 */
+        }
+        .btn-blue { background-color: #3498db; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+        .btn-blue:hover { background-color: #2980b9; }
+        
+        .btn-green { background-color: #2ecc71; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
+        .btn-green:hover { background-color: #27ae60; }
+
+        .btn-disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #95a5a6;
+            margin-bottom: 10px;
+            display: block;
+            font-weight: bold;
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #e67e22;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>TXT 压缩工具 (.123版)</h2>
+        <h2>📦 万能文件转 .123</h2>
 
-        <div class="section">
-            <div class="section-title">
-                模式 A: 批量独立压缩
-                <span class="badge">一对一</span>
-            </div>
-            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">选择多个文件，每个都会生成单独的 .123 包。</p>
-            <input type="file" id="filesInput" multiple accept=".txt">
-            <button class="btn-primary" id="btnBatch" onclick="handleBatchFiles()">批量开始下载</button>
+        <div>
+            <span class="section-label">模式 A: 任意文件一对一</span>
+            
+            <label for="filesInput" class="upload-box" id="boxA">
+                <span class="icon">📄</span>
+                <span class="box-title">点击选择任意文件</span>
+                <span class="box-desc">支持多选，不限格式 (图片/视频/文档等)</span>
+            </label>
+            <input type="file" id="filesInput" multiple onchange="updateFileInfo('filesInput', 'infoA', 'boxA')">
+            
+            <div id="infoA" class="file-info">未选择文件</div>
+            
+            <button class="action-btn btn-blue" id="btnBatch" onclick="handleBatchFiles()">⬇️ 批量独立压缩下载</button>
             <div id="statusBatch" class="status-msg"></div>
-            <div class="warning" id="permWarning" style="display:none;">
-                ⚠️ <strong>注意：</strong> 如果浏览器拦截了多个文件的下载，请在地址栏右侧点击“允许下载多个文件”。
-            </div>
         </div>
 
-        <div class="section">
-            <div class="section-title">
-                模式 B: 文件夹整体打包
-                <span class="badge">多对一</span>
-            </div>
-            <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">选择一个文件夹，保留目录结构打包为一个 .123 包。</p>
-            <input type="file" id="folderInput" webkitdirectory>
-            <button class="btn-success" id="btnFolder" onclick="handleFolder()">打包文件夹</button>
+        <hr style="border:0; border-top:1px solid #eee; margin: 0 0 30px 0;">
+
+        <div>
+            <span class="section-label">模式 B: 文件夹整体打包</span>
+            
+            <label for="folderInput" class="upload-box" id="boxB">
+                <span class="icon">📁</span>
+                <span class="box-title">点击选择文件夹</span>
+                <span class="box-desc">保留目录结构，整包下载</span>
+            </label>
+            <input type="file" id="folderInput" webkitdirectory onchange="updateFileInfo('folderInput', 'infoB', 'boxB')">
+            
+            <div id="infoB" class="file-info">未选择文件夹</div>
+            
+            <button class="action-btn btn-green" id="btnFolder" onclick="handleFolder()">⬇️ 打包文件夹下载</button>
             <div id="statusFolder" class="status-msg"></div>
         </div>
 
     </div>
 
     <script>
-        // 通用下载函数
+        // 更新显示选中了多少个文件
+        function updateFileInfo(inputId, infoId, boxId) {
+            const input = document.getElementById(inputId);
+            const info = document.getElementById(infoId);
+            const box = document.getElementById(boxId);
+            
+            if (input.files.length > 0) {
+                if(inputId === 'folderInput') {
+                    // 文件夹模式通常文件很多，显示总数
+                    info.innerText = `已选中文件夹，包含 ${input.files.length} 个文件`;
+                } else {
+                    info.innerText = `已选中 ${input.files.length} 个文件`;
+                }
+                box.classList.add('active');
+            } else {
+                info.innerText = "未选择文件";
+                box.classList.remove('active');
+            }
+        }
+
+        // 通用下载
         function downloadBlob(blob, filename) {
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -137,108 +204,100 @@
             document.body.removeChild(link);
         }
 
-        // =======================
-        // 模式 A: 批量独立压缩
-        // =======================
+        // --- 模式 A 逻辑 ---
         async function handleBatchFiles() {
             const input = document.getElementById('filesInput');
             const status = document.getElementById('statusBatch');
-            const warning = document.getElementById('permWarning');
             const btn = document.getElementById('btnBatch');
 
             if (input.files.length === 0) {
-                alert("请先在模式 A 中选择文件！");
+                alert("请先点击上方的大方框选择文件！");
                 return;
             }
 
+            // 提示用户允许多文件下载
             if (input.files.length > 1) {
-                warning.style.display = 'block';
+                status.innerText = "⚠️ 如下载被拦截，请在地址栏允许下载多个文件";
             }
 
             btn.disabled = true;
-            status.innerText = `正在处理 ${input.files.length} 个文件...`;
-
+            btn.classList.add('btn-disabled');
+            
             try {
                 for (let i = 0; i < input.files.length; i++) {
                     const file = input.files[i];
                     
-                    // 1. 为每个文件创建一个新的 ZIP 对象
                     const zip = new JSZip();
-                    
-                    // 2. 将文件放入 ZIP
-                    zip.file(file.name, file);
+                    zip.file(file.name, file); // 放入 ZIP
 
-                    // 3. 生成 Blob
                     const content = await zip.generateAsync({ type: "blob" });
 
-                    // 4. 处理文件名 (移除原后缀，添加 .123)
-                    // 如果原文件名是 log.txt，处理后为 log.123
-                    let baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    // 获取不带后缀的文件名
+                    let baseName = file.name;
+                    // 如果文件名里有 . 则去掉最后一个 . 及其后面的内容
+                    if(baseName.lastIndexOf('.') > 0) {
+                        baseName = baseName.substring(0, baseName.lastIndexOf('.'));
+                    }
+                    
                     const finalName = baseName + ".123";
 
-                    // 5. 下载
                     downloadBlob(content, finalName);
-
-                    // 简单延时，防止浏览器因为请求过快而直接屏蔽后续下载
-                    status.innerText = `已完成: ${i+1} / ${input.files.length}`;
-                    await new Promise(r => setTimeout(r, 200)); 
+                    
+                    // 稍微等待，避免浏览器卡死
+                    await new Promise(r => setTimeout(r, 300));
                 }
-                status.innerText = "批量处理完成！请检查下载目录。";
+                status.innerText = "✅ 所有文件处理完毕！";
             } catch (err) {
                 console.error(err);
-                status.innerText = "发生错误: " + err.message;
+                status.innerText = "❌ 出错: " + err.message;
             } finally {
                 btn.disabled = false;
+                btn.classList.remove('btn-disabled');
             }
         }
 
-        // =======================
-        // 模式 B: 文件夹打包
-        // =======================
+        // --- 模式 B 逻辑 ---
         async function handleFolder() {
             const input = document.getElementById('folderInput');
             const status = document.getElementById('statusFolder');
             const btn = document.getElementById('btnFolder');
 
             if (input.files.length === 0) {
-                alert("请先在模式 B 中选择文件夹！");
+                alert("请先点击文件夹图标选择文件夹！");
                 return;
             }
 
             btn.disabled = true;
-            status.innerText = "正在分析文件夹结构...";
+            btn.classList.add('btn-disabled');
+            status.innerText = "⏳ 正在压缩，请稍候...";
 
             try {
                 const zip = new JSZip();
                 
-                // 获取文件夹名称（通常取第一个文件的路径第一段）
+                // 智能获取文件夹名
                 let folderName = "folder_archive";
                 if (input.files[0].webkitRelativePath) {
                     const parts = input.files[0].webkitRelativePath.split('/');
                     if (parts.length > 0) folderName = parts[0];
                 }
 
-                // 遍历文件夹内所有文件
                 for (let i = 0; i < input.files.length; i++) {
                     const file = input.files[i];
-                    // 使用 webkitRelativePath 保持文件夹内的层级结构
-                    // 例如: MyFolder/sub/a.txt 会被完整保留路径放入 zip
                     zip.file(file.webkitRelativePath, file);
                 }
 
-                status.innerText = "正在压缩...";
                 const content = await zip.generateAsync({ type: "blob" });
-
                 const finalName = folderName + ".123";
                 
                 downloadBlob(content, finalName);
-                status.innerText = "文件夹打包下载已开始！";
+                status.innerText = "✅ 下载已开始！";
 
             } catch (err) {
                 console.error(err);
-                status.innerText = "错误: " + err.message;
+                status.innerText = "❌ 出错: " + err.message;
             } finally {
                 btn.disabled = false;
+                btn.classList.remove('btn-disabled');
             }
         }
     </script>
